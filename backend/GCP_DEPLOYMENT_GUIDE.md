@@ -200,40 +200,24 @@ This guide will walk you through deploying your AI Video Enhancer to Google Clou
 3. **Choose "Deploy one revision from an existing container image"**
 4. **We'll build and push the image first**
 
-### Build and Push Container Image:
+### Build and Push Container Image First:
 
-1. **Go to Cloud Build > History**
-2. **We'll use Cloud Build to build our image**
+1. **Open Cloud Shell** in GCP Console (click terminal icon)
+2. **Clone your repository**:
 
-**First, let's prepare the API code for Cloud Run:**
+```bash
+git clone https://github.com/luexclothings-hue/ai-video-enhancer.git
+cd ai-video-enhancer
+```
 
-### Create Cloud Run Dockerfile:
+3. **Build and push the API image**:
 
-Create `backend/apps/api/Dockerfile.cloudrun`:
+```bash
+# Build the image using Cloud Run optimized Dockerfile
+docker build -f backend/apps/api/Dockerfile.cloudrun -t gcr.io/$GOOGLE_CLOUD_PROJECT/video-enhancer-api:latest backend/apps/api/
 
-```dockerfile
-FROM node:20-alpine
-
-WORKDIR /app
-
-# Copy package files
-COPY package*.json ./
-RUN npm ci --only=production
-
-# Copy source code
-COPY . .
-
-# Generate Prisma client
-RUN npx prisma generate
-
-# Build the application
-RUN npm run build
-
-# Expose port (Cloud Run uses PORT env var)
-EXPOSE $PORT
-
-# Start the application
-CMD ["npm", "start"]
+# Push to Google Container Registry
+docker push gcr.io/$GOOGLE_CLOUD_PROJECT/video-enhancer-api:latest
 ```
 
 ### Deploy to Cloud Run:
@@ -241,8 +225,10 @@ CMD ["npm", "start"]
 1. **Go to Cloud Run > Services**
 2. **Click "Create Service"**
 3. **Configure service**:
+   - **Container image URL**: `gcr.io/YOUR_PROJECT_ID/video-enhancer-api:latest`
    - **Service name**: `video-enhancer-api`
    - **Region**: `us-central1`
+   - **Authentication**: `Allow unauthenticated invocations`
    - **CPU allocation**: `CPU is only allocated during request processing`
    - **Minimum instances**: `0` (scales to zero)
    - **Maximum instances**: `10`
