@@ -1,16 +1,20 @@
-import { FastifyInstance } from 'fastify';
-import { ZodTypeProvider } from 'fastify-type-provider-zod';
-import { authenticate } from '../../middleware/auth.middleware';
+import { FastifyInstance, FastifyRequest } from 'fastify';
+import { authenticate, AuthUser } from '../../middleware/auth.middleware';
 import { AuthService } from '../auth/auth.service';
 import { SUBSCRIPTION_LIMITS } from '../../config';
 import { NotFoundError } from '../../utils/errors';
 
+interface AuthenticatedRequest extends FastifyRequest {
+  user: AuthUser;
+}
+
+type PlanType = 'FREE' | 'CREATOR' | 'PRO';
+
 export async function userRoutes(fastify: FastifyInstance) {
-  const server = fastify.withTypeProvider<ZodTypeProvider>();
   const authService = new AuthService(fastify.prisma);
 
   // GET /me
-  server.get(
+  fastify.get(
     '/me',
     {
       onRequest: [authenticate],
@@ -33,8 +37,8 @@ export async function userRoutes(fastify: FastifyInstance) {
         security: [{ bearerAuth: [] }],
       },
     },
-    async (request) => {
-      const user = await authService.getUserById(request.user!.userId);
+    async (request: AuthenticatedRequest) => {
+      const user = await authService.getUserById(request.user.userId);
 
       if (!user) {
         throw new NotFoundError('User not found');
@@ -45,7 +49,7 @@ export async function userRoutes(fastify: FastifyInstance) {
   );
 
   // GET /me/subscription
-  server.get(
+  fastify.get(
     '/me/subscription',
     {
       onRequest: [authenticate],
@@ -88,14 +92,14 @@ export async function userRoutes(fastify: FastifyInstance) {
         security: [{ bearerAuth: [] }],
       },
     },
-    async (request) => {
-      const user = await authService.getUserById(request.user!.userId);
+    async (request: AuthenticatedRequest) => {
+      const user = await authService.getUserById(request.user.userId);
 
       if (!user) {
         throw new NotFoundError('User not found');
       }
 
-      const limits = SUBSCRIPTION_LIMITS[user.plan];
+      const limits = SUBSCRIPTION_LIMITS[user.plan as PlanType];
 
       // Calculate billing cycle end (30 days from start)
       const billingCycleEnd = new Date(user.billingCycleStart);

@@ -5,7 +5,6 @@ import multipart from '@fastify/multipart';
 import swagger from '@fastify/swagger';
 import swaggerUi from '@fastify/swagger-ui';
 import { config } from './config';
-import logger from './utils/logger';
 import prismaPlugin from './plugins/prisma';
 import { AppError } from './utils/errors';
 

@@ -1,6 +1,5 @@
-import { FastifyInstance } from 'fastify';
-import { ZodTypeProvider } from 'fastify-type-provider-zod';
-import { authenticate } from '../../middleware/auth.middleware';
+import { FastifyInstance, FastifyRequest } from 'fastify';
+import { authenticate, AuthUser } from '../../middleware/auth.middleware';
 import { VideoService } from './videos.service';
 import { JobService } from '../jobs/jobs.service';
 import { storageService } from '../../services/storage.service';
@@ -10,13 +9,16 @@ import { uploadVideoSchema } from './videos.schema';
 import logger from '../../utils/logger';
 import { z } from 'zod';
 
+interface AuthenticatedRequest extends FastifyRequest {
+  user: AuthUser;
+}
+
 export async function videoRoutes(fastify: FastifyInstance) {
-  const server = fastify.withTypeProvider<ZodTypeProvider>();
   const videoService = new VideoService(fastify.prisma);
   const jobService = new JobService(fastify.prisma);
 
   // POST /videos/upload
-  server.post(
+  fastify.post(
     '/videos/upload',
     {
       onRequest: [authenticate],
@@ -38,9 +40,15 @@ export async function videoRoutes(fastify: FastifyInstance) {
         security: [{ bearerAuth: [] }],
       },
     },
-    async (request, reply) => {
-      const { filename, durationSeconds, width, height } = request.body;
-      const userId = request.user!.userId;
+    async (request: AuthenticatedRequest, reply) => {
+      const body = request.body as {
+        filename: string;
+        durationSeconds: number;
+        width: number;
+        height: number;
+      };
+      const { filename, durationSeconds, width, height } = body;
+      const userId = request.user.userId;
 
       // Validate subscription limits including resolution
       const { limits } = await videoService.validateVideoUpload(
@@ -101,7 +109,7 @@ export async function videoRoutes(fastify: FastifyInstance) {
   );
 
   // GET /videos
-  server.get(
+  fastify.get(
     '/videos',
     {
       onRequest: [authenticate],
@@ -141,10 +149,11 @@ export async function videoRoutes(fastify: FastifyInstance) {
         security: [{ bearerAuth: [] }],
       },
     },
-    async (request) => {
-      const userId = request.user!.userId;
-      const limit = request.query.limit || 50;
-      const offset = request.query.offset || 0;
+    async (request: AuthenticatedRequest) => {
+      const userId = request.user.userId;
+      const query = request.query as { limit?: number; offset?: number };
+      const limit = query.limit || 50;
+      const offset = query.offset || 0;
 
       const { videos, total } = await videoService.getUserVideos(userId, limit, offset);
 
@@ -158,7 +167,7 @@ export async function videoRoutes(fastify: FastifyInstance) {
   );
 
   // GET /videos/:id
-  server.get(
+  fastify.get(
     '/videos/:id',
     {
       onRequest: [authenticate],
@@ -187,11 +196,11 @@ export async function videoRoutes(fastify: FastifyInstance) {
         security: [{ bearerAuth: [] }],
       },
     },
-    async (request) => {
-      const userId = request.user!.userId;
-      const { id } = request.params;
+    async (request: AuthenticatedRequest) => {
+      const userId = request.user.userId;
+      const params = request.params as { id: string };
 
-      const video = await videoService.getVideoById(id, userId);
+      const video = await videoService.getVideoById(params.id, userId);
 
       // Generate download URL if enhanced video is available
       let downloadUrl = null;
