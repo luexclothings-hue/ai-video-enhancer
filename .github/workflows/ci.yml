@@ -51,6 +51,11 @@ jobs:
       - name: Install API dependencies
         run: cd backend/apps/api && npm ci
 
+      - name: Generate Prisma client
+        run: cd backend/apps/api && npx prisma generate
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/video_enhancer_test
+
       - name: Run type check
         run: npm run type-check
 
@@ -87,6 +92,11 @@ jobs:
       - name: Install API dependencies
         run: cd backend/apps/api && npm ci
 
+      - name: Generate Prisma client
+        run: cd backend/apps/api && npx prisma generate
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/video_enhancer_test
+
       - name: Run database migrations
         run: cd backend/apps/api && npx prisma migrate deploy
         env:
@@ -118,6 +128,11 @@ jobs:
 
       - name: Install API dependencies
         run: cd backend/apps/api && npm ci
+
+      - name: Generate Prisma client
+        run: cd backend/apps/api && npx prisma generate
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/video_enhancer_test
 
       - name: Build application
         run: npm run build
