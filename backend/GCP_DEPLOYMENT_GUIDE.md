@@ -1,14 +1,29 @@
 # Google Cloud Platform Deployment Guide
 
-## AI Video Enhancer - Production Deployment
+## AI Video Enhancer - Cost-Optimized Production Deployment
 
-This guide will walk you through deploying your AI Video Enhancer to Google Cloud Platform using the web console (UI) with specific GPU recommendations and settings.
+This guide will walk you through deploying your AI Video Enhancer to Google Cloud Platform using cost-optimized services perfect for small to medium scale (50-500 users/month).
 
 ## 📋 Prerequisites
 
 - Google Cloud Platform account with billing enabled
 - Domain name (optional, for custom domain)
-- Estimated monthly cost: $400-600 (with GPU VM running 24/7)
+- **Estimated monthly cost: $50-80** (vs $400-600 with traditional VMs)
+
+## 💰 Cost Optimization Strategy
+
+**Traditional Approach**: $400-600/month
+
+- Always-on VMs
+- Oversized database
+- 24/7 GPU usage
+
+**Our Optimized Approach**: $50-80/month
+
+- Cloud Run for API (serverless, scales to zero)
+- Micro database instance
+- Preemptible GPU with auto-shutdown
+- Pay-per-use model
 
 ---
 
@@ -46,7 +61,7 @@ This guide will walk you through deploying your AI Video Enhancer to Google Clou
 
 ---
 
-## 🗄️ Step 3: Set Up Cloud SQL Database
+## 🗄️ Step 3: Set Up Cloud SQL Database (Cost-Optimized)
 
 ### Create Database Instance:
 
@@ -59,8 +74,10 @@ This guide will walk you through deploying your AI Video Enhancer to Google Clou
    - **Database version**: `PostgreSQL 15`
    - **Region**: `us-central1` (Iowa) - cost-effective
    - **Zone**: `us-central1-a`
-   - **Machine type**: `db-g1-small` (1 vCPU, 1.7 GB RAM) - $25/month
-   - **Storage**: `20 GB SSD` with auto-increase enabled
+   - **Machine type**: `db-f1-micro` (1 shared vCPU, 0.6 GB RAM) - **$7/month**
+   - **Storage**: `10 GB SSD` with auto-increase enabled
+   - **High availability**: **Disabled** (saves ~$100/month)
+   - **Automated backups**: **Enabled** (7 days retention)
 5. **Click "Create Instance"** (takes 5-10 minutes)
 
 ### Create Database:
@@ -174,34 +191,95 @@ This guide will walk you through deploying your AI Video Enhancer to Google Clou
 
 ---
 
-## 💻 Step 7: Create API Server VM
+## 💻 Step 7: Deploy API Server to Cloud Run (Serverless)
 
-### Create VM Instance:
+### Prepare API for Cloud Run:
 
-1. **Go to Compute Engine > VM Instances**
-2. **Click "Create Instance"**
-3. **Configure VM**:
-   - **Name**: `video-enhancer-api`
+1. **Go to Cloud Run > Services**
+2. **Click "Create Service"**
+3. **Choose "Deploy one revision from an existing container image"**
+4. **We'll build and push the image first**
+
+### Build and Push Container Image:
+
+1. **Go to Cloud Build > History**
+2. **We'll use Cloud Build to build our image**
+
+**First, let's prepare the API code for Cloud Run:**
+
+### Create Cloud Run Dockerfile:
+
+Create `backend/apps/api/Dockerfile.cloudrun`:
+
+```dockerfile
+FROM node:20-alpine
+
+WORKDIR /app
+
+# Copy package files
+COPY package*.json ./
+RUN npm ci --only=production
+
+# Copy source code
+COPY . .
+
+# Generate Prisma client
+RUN npx prisma generate
+
+# Build the application
+RUN npm run build
+
+# Expose port (Cloud Run uses PORT env var)
+EXPOSE $PORT
+
+# Start the application
+CMD ["npm", "start"]
+```
+
+### Deploy to Cloud Run:
+
+1. **Go to Cloud Run > Services**
+2. **Click "Create Service"**
+3. **Configure service**:
+   - **Service name**: `video-enhancer-api`
    - **Region**: `us-central1`
-   - **Zone**: `us-central1-a`
-   - **Machine configuration**:
-     - **Series**: `N1`
-     - **Machine type**: `n1-standard-2` (2 vCPUs, 7.5 GB RAM) - $50/month
-   - **Boot disk**:
-     - **Operating system**: `Ubuntu`
-     - **Version**: `Ubuntu 20.04 LTS`
-     - **Boot disk type**: `Standard persistent disk`
-     - **Size**: `50 GB`
-   - **Firewall**:
-     - ✅ **Allow HTTP traffic**
-     - ✅ **Allow HTTPS traffic**
-4. **Click "Create"** (takes 2-3 minutes)
+   - **CPU allocation**: `CPU is only allocated during request processing`
+   - **Minimum instances**: `0` (scales to zero)
+   - **Maximum instances**: `10`
+   - **CPU**: `1`
+   - **Memory**: `1 GiB`
+   - **Request timeout**: `300 seconds`
+   - **Maximum concurrent requests**: `80`
+
+### Set Environment Variables:
+
+In the **Variables & Secrets** tab, add:
+
+```env
+NODE_ENV=production
+DATABASE_URL=postgresql://postgres:YOUR_PASSWORD@/video_enhancer?host=/cloudsql/YOUR_PROJECT:us-central1:video-enhancer-db
+JWT_SECRET=your-super-secure-jwt-secret-key
+GCP_PROJECT_ID=your-project-id
+GCS_BUCKET_VIDEOS_RAW=video-enhancer-raw-prod
+GCS_BUCKET_VIDEOS_ENHANCED=video-enhancer-enhanced-prod
+PUBSUB_TOPIC_VIDEO_JOBS=video-jobs
+```
+
+### Connect to Cloud SQL:
+
+1. **In Cloud Run service configuration**
+2. **Go to "Connections" tab**
+3. **Click "Add Connection"**
+4. **Select your Cloud SQL instance**
+5. **This automatically handles the connection**
+
+6. **Click "Create"**
 
 ---
 
-## 🎮 Step 8: Create GPU Worker VM
+## 🎮 Step 8: Create Cost-Optimized GPU Worker VM
 
-### Create GPU VM Instance:
+### Create Preemptible GPU VM Instance:
 
 1. **Go to Compute Engine > VM Instances**
 2. **Click "Create Instance"**
@@ -213,107 +291,172 @@ This guide will walk you through deploying your AI Video Enhancer to Google Clou
      - **Series**: `N1`
      - **Machine type**: `n1-standard-4` (4 vCPUs, 15 GB RAM)
    - **GPUs**: **Click "Add GPU"**
-     - **GPU type**: `NVIDIA Tesla T4` (recommended for cost/performance)
+     - **GPU type**: `NVIDIA Tesla T4` (best cost/performance)
      - **Number of GPUs**: `1`
-     - **GPU platform**: Leave as default
+   - **Availability policies**:
+     - **VM provisioning model**: `Spot` (70% cheaper!)
+     - **On VM preemption**: `Stop` (don't delete)
    - **Boot disk**:
      - **Operating system**: `Ubuntu`
      - **Version**: `Ubuntu 20.04 LTS`
      - **Boot disk type**: `Standard persistent disk`
-     - **Size**: `100 GB` (need space for models and temp files)
+     - **Size**: `50 GB` (reduced from 100GB)
    - **Advanced options > Management**:
-     - **Metadata**: Add key-value pair:
-       - **Key**: `install-nvidia-driver`
-       - **Value**: `True`
+     - **Metadata**: Add key-value pairs:
+       - **Key**: `install-nvidia-driver`, **Value**: `True`
+       - **Key**: `enable-oslogin`, **Value**: `TRUE`
+   - **Advanced options > Management > Automation**:
+     - **Startup script**: Add auto-shutdown script:
 
-### GPU Recommendations by Budget:
+```bash
+#!/bin/bash
+# Auto-shutdown after 2 hours of inactivity
+echo "*/30 * * * * /opt/check-activity.sh" | crontab -
 
-| GPU Type       | Monthly Cost | Performance | Recommended For                         |
-| -------------- | ------------ | ----------- | --------------------------------------- |
-| **Tesla T4**   | ~$350        | Good        | **Recommended** - Best cost/performance |
-| **Tesla V100** | ~$800        | Excellent   | High-volume processing                  |
-| **Tesla A100** | ~$1200       | Outstanding | Maximum performance                     |
+# Create activity check script
+cat > /opt/check-activity.sh << 'EOF'
+#!/bin/bash
+# Check if worker is processing jobs
+if ! docker logs worker --since=30m 2>/dev/null | grep -q "Processing video"; then
+    # No activity in 30 minutes, check if any jobs in queue
+    JOBS=$(gcloud pubsub subscriptions pull video-jobs-subscription --limit=1 --format="value(message.data)" 2>/dev/null | wc -l)
+    if [ "$JOBS" -eq 0 ]; then
+        echo "No jobs in queue, shutting down to save costs"
+        sudo shutdown -h now
+    fi
+fi
+EOF
+chmod +x /opt/check-activity.sh
+```
+
+### Cost Comparison:
+
+| Configuration    | Monthly Cost | When to Use                   |
+| ---------------- | ------------ | ----------------------------- |
+| **Spot VM**      | ~$105        | **Recommended** - 70% savings |
+| **Regular VM**   | ~$350        | High availability needed      |
+| **Actual Usage** | ~$20-40      | With auto-shutdown (our goal) |
 
 4. **Click "Create"** (takes 3-5 minutes)
 
+### Set Up Auto-Start Trigger:
+
+Create a Cloud Function to start the worker when jobs arrive:
+
+1. **Go to Cloud Functions > Create Function**
+2. **Configure function**:
+   - **Function name**: `start-worker-vm`
+   - **Region**: `us-central1`
+   - **Trigger type**: `Pub/Sub`
+   - **Topic**: `video-jobs`
+3. **Runtime**: `Python 3.9`
+4. **Source code**:
+
+```python
+import functions_framework
+from google.cloud import compute_v1
+
+@functions_framework.cloud_event
+def start_worker(cloud_event):
+    compute_client = compute_v1.InstancesClient()
+    project = 'your-project-id'
+    zone = 'us-central1-a'
+    instance = 'video-enhancer-worker'
+
+    try:
+        # Start the instance if it's stopped
+        operation = compute_client.start(
+            project=project,
+            zone=zone,
+            instance=instance
+        )
+        print(f"Starting worker VM: {operation.name}")
+    except Exception as e:
+        print(f"Worker already running or error: {e}")
+```
+
+5. **Deploy the function**
+
 ---
 
-## 🔥 Step 9: Configure Firewall Rules
+## 🔥 Step 9: Configure Firewall Rules (Not Needed for Cloud Run)
 
-### Create Firewall Rule:
+**Note**: Cloud Run handles HTTPS automatically, so we don't need custom firewall rules for the API. We only need rules for the GPU worker if you want to access it directly.
+
+### Optional: Create Firewall Rule for Worker SSH:
 
 1. **Go to VPC Network > Firewall**
 2. **Click "Create Firewall Rule"**
 3. **Configure rule**:
-   - **Name**: `allow-video-enhancer-http`
+   - **Name**: `allow-worker-ssh`
    - **Direction**: `Ingress`
    - **Action**: `Allow`
    - **Targets**: `Specified target tags`
-   - **Target tags**: `http-server,https-server`
+   - **Target tags**: `video-enhancer-worker`
    - **Source IP ranges**: `0.0.0.0/0`
    - **Protocols and ports**:
-     - ✅ **TCP** - Ports: `80,443`
+     - ✅ **TCP** - Ports: `22`
 4. **Click "Create"**
 
 ---
 
 ## 🚀 Step 10: Deploy Application
 
-### Upload Service Account Key:
+### Deploy API to Cloud Run:
 
-1. **SSH into API VM**:
-   - Go to **Compute Engine > VM Instances**
-   - Click **SSH** next to `video-enhancer-api`
-2. **Upload service account key**:
+**Option A: Using Cloud Build (Recommended)**
 
-   ```bash
-   # Create directory
-   mkdir -p /opt/video-enhancer
+1. **Connect your GitHub repository**:
+   - Go to **Cloud Build > Triggers**
+   - Click **"Create Trigger"**
+   - Connect your GitHub repository
+   - Configure trigger for `main` branch
 
-   # Upload your gcp-service-account.json file
-   # (Use the upload button in SSH terminal or scp)
-   ```
+2. **Create cloudbuild.yaml** in your repository root:
 
-### Deploy API Server:
+```yaml
+steps:
+  # Build API container
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['build', '-t', 'gcr.io/$PROJECT_ID/video-enhancer-api', './backend/apps/api']
+
+  # Push to Container Registry
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['push', 'gcr.io/$PROJECT_ID/video-enhancer-api']
+
+  # Deploy to Cloud Run
+  - name: 'gcr.io/cloud-builders/gcloud'
+    args:
+      - 'run'
+      - 'deploy'
+      - 'video-enhancer-api'
+      - '--image'
+      - 'gcr.io/$PROJECT_ID/video-enhancer-api'
+      - '--region'
+      - 'us-central1'
+      - '--platform'
+      - 'managed'
+      - '--allow-unauthenticated'
+```
+
+**Option B: Manual Deployment**
+
+1. **Build and push locally**:
 
 ```bash
-# Install Docker
-curl -fsSL https://get.docker.com -o get-docker.sh
-sudo sh get-docker.sh
-sudo usermod -aG docker $USER
-
-# Clone your repository
-cd /opt/video-enhancer
-git clone YOUR_REPOSITORY_URL .
-
-# Set up environment
+# Build the image
 cd backend/apps/api
-cp .env.example .env
+docker build -t gcr.io/YOUR_PROJECT_ID/video-enhancer-api .
 
-# Edit environment file with your values
-nano .env
-```
+# Push to Google Container Registry
+docker push gcr.io/YOUR_PROJECT_ID/video-enhancer-api
 
-**Environment Configuration** (`.env`):
-
-```env
-NODE_ENV=production
-PORT=3000
-DATABASE_URL=postgresql://postgres:YOUR_PASSWORD@/video_enhancer?host=/cloudsql/YOUR_PROJECT:us-central1:video-enhancer-db
-JWT_SECRET=your-super-secure-jwt-secret-key
-GCP_PROJECT_ID=your-project-id
-GCS_BUCKET_VIDEOS_RAW=video-enhancer-raw-prod
-GCS_BUCKET_VIDEOS_ENHANCED=video-enhancer-enhanced-prod
-PUBSUB_TOPIC_VIDEO_JOBS=video-jobs
-GOOGLE_APPLICATION_CREDENTIALS=/opt/video-enhancer/gcp-service-account.json
-```
-
-```bash
-# Build and run
-docker build -t video-enhancer-api .
-docker run -d --name api --restart unless-stopped -p 80:3000 \
-  -v /opt/video-enhancer/gcp-service-account.json:/app/gcp-service-account.json:ro \
-  video-enhancer-api
+# Deploy to Cloud Run
+gcloud run deploy video-enhancer-api \
+  --image gcr.io/YOUR_PROJECT_ID/video-enhancer-api \
+  --region us-central1 \
+  --platform managed \
+  --allow-unauthenticated
 ```
 
 ### Deploy GPU Worker:
@@ -380,14 +523,22 @@ docker run -d --name worker --restart unless-stopped --gpus all \
 
 ---
 
-## 🌐 Step 11: Get External IP Addresses
+## 🌐 Step 11: Get Your API URL
 
-### Find Your API Server IP:
+### Find Your Cloud Run Service URL:
 
-1. **Go to Compute Engine > VM Instances**
-2. **Find `video-enhancer-api`**
-3. **Note the "External IP"** (e.g., `34.123.45.67`)
-4. **Test API**: Visit `http://YOUR_API_IP/health`
+1. **Go to Cloud Run > Services**
+2. **Click on `video-enhancer-api`**
+3. **Copy the URL** (e.g., `https://video-enhancer-api-xxx-uc.a.run.app`)
+4. **Test API**: Visit `https://YOUR_CLOUD_RUN_URL/health`
+
+### Configure Custom Domain (Optional):
+
+1. **Go to Cloud Run > Manage Custom Domains**
+2. **Click "Add Mapping"**
+3. **Select your service**
+4. **Enter your domain** (e.g., `api.yourdomain.com`)
+5. **Follow DNS configuration instructions**
 
 ---
 
@@ -396,7 +547,7 @@ docker run -d --name worker --restart unless-stopped --gpus all \
 ### Check API Health:
 
 ```bash
-curl http://YOUR_API_IP/health
+curl https://YOUR_CLOUD_RUN_URL/health
 ```
 
 **Expected Response**:
@@ -410,10 +561,13 @@ curl http://YOUR_API_IP/health
 }
 ```
 
-### Check Worker Logs:
+### Check Worker Status:
 
 ```bash
-# SSH into worker VM
+# SSH into worker VM (when it's running)
+gcloud compute ssh video-enhancer-worker --zone=us-central1-a
+
+# Check if worker is running
 sudo docker logs worker -f
 ```
 
@@ -425,40 +579,79 @@ Model loaded successfully on cuda
 Worker listening for jobs on video-jobs-subscription...
 ```
 
----
+### Test Auto-Start Functionality:
 
-## 💰 Cost Breakdown
-
-| Service           | Configuration      | Monthly Cost        |
-| ----------------- | ------------------ | ------------------- |
-| **Cloud SQL**     | db-g1-small        | $25                 |
-| **Cloud Storage** | 500GB Standard     | $10                 |
-| **Pub/Sub**       | 1M messages        | $1                  |
-| **API VM**        | n1-standard-2      | $50                 |
-| **GPU VM**        | n1-standard-4 + T4 | $350                |
-| **Network**       | Egress traffic     | $10-20              |
-| **Total**         |                    | **~$446-456/month** |
-
-### Cost Optimization Tips:
-
-- Use **Preemptible GPU VMs** (70% cheaper, but can be terminated)
-- Set up **auto-shutdown** during low usage hours
-- Use **committed use discounts** for long-term deployments
-- Monitor usage with **budget alerts**
+1. **Upload a test video** via your API
+2. **Check Cloud Function logs** to see if worker started
+3. **Monitor worker processing** in logs
+4. **Verify auto-shutdown** after processing completes
 
 ---
 
-## 🔧 Step 13: Set Up Monitoring (Optional)
+## 💰 Cost Breakdown (Optimized)
 
-### Enable Monitoring:
+| Service            | Configuration      | Monthly Cost   | Savings        |
+| ------------------ | ------------------ | -------------- | -------------- |
+| **Cloud SQL**      | db-f1-micro        | $7             | $18 saved      |
+| **Cloud Storage**  | 200GB Standard     | $5             | $5 saved       |
+| **Pub/Sub**        | 100K messages      | $0.40          | $0.60 saved    |
+| **Cloud Run API**  | 100K requests      | $10            | $40 saved      |
+| **Spot GPU VM**    | n1-standard-4 + T4 | $30\*          | $320 saved     |
+| **Cloud Function** | VM auto-start      | $1             | New            |
+| **Network**        | Egress traffic     | $5             | $10 saved      |
+| **Total**          |                    | **~$58/month** | **$393 saved** |
+
+\*Actual usage with auto-shutdown. Spot pricing is $105/month if running 24/7.
+
+### Cost Optimization Features:
+
+✅ **Cloud Run scales to zero** - No cost when not used  
+✅ **Spot GPU VM** - 70% cheaper than regular VMs  
+✅ **Auto-shutdown** - GPU only runs when processing  
+✅ **Smaller database** - Right-sized for your scale  
+✅ **Lifecycle policies** - Auto-delete old files
+
+### Usage Estimates for 50 Users/Month:
+
+- **API requests**: ~10,000/month
+- **GPU processing**: ~20 hours/month
+- **Storage**: ~100GB videos
+- **Actual cost**: $35-50/month
+
+---
+
+## 🔧 Step 13: Set Up Budget Alerts & Monitoring
+
+### Create Budget Alert:
+
+1. **Go to Billing > Budgets & Alerts**
+2. **Click "Create Budget"**
+3. **Configure budget**:
+   - **Name**: `Video Enhancer Monthly Budget`
+   - **Budget amount**: `$80` (20% buffer over expected $60)
+   - **Alert thresholds**: `50%, 90%, 100%`
+   - **Email notifications**: Your email
+4. **Click "Finish"**
+
+### Set Up Monitoring:
 
 1. **Go to Monitoring > Overview**
 2. **Create a workspace** (if prompted)
 3. **Set up alerts for**:
-   - CPU usage > 80%
-   - Memory usage > 80%
-   - Disk usage > 80%
-   - API error rate > 5%
+   - Cloud Run error rate > 5%
+   - Cloud SQL CPU > 80%
+   - GPU VM memory > 90%
+   - Storage usage > 80%
+
+### Enable Cost Optimization:
+
+1. **Go to Compute Engine > VM Instances**
+2. **Click on worker VM**
+3. **Click "Edit"**
+4. **Under "Management"**:
+   - **Preemptibility**: `On` (if not already set)
+   - **Automatic restart**: `Off` (for spot instances)
+   - **On host maintenance**: `Terminate VM instance`
 
 ---
 
@@ -511,7 +704,9 @@ Worker listening for jobs on video-jobs-subscription...
 
 ---
 
-**🎉 Congratulations! Your AI Video Enhancer is now deployed on Google Cloud Platform!**
+**🎉 Congratulations! Your Cost-Optimized AI Video Enhancer is now deployed on Google Cloud Platform!**
 
-Your API is available at: `http://YOUR_API_IP`
-API Documentation: `http://YOUR_API_IP/documentation`
+Your API is available at: `https://YOUR_CLOUD_RUN_URL`  
+API Documentation: `https://YOUR_CLOUD_RUN_URL/documentation`  
+**Monthly Cost**: ~$50-80 (vs $400-600 traditional deployment)  
+**Credits Usage**: 5+ months from your $300 credits!
