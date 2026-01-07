@@ -1,14 +1,16 @@
-# Multi-stage build for Node.js API
+# Cloud Run optimized Dockerfile
 FROM node:20-alpine AS builder
 
 WORKDIR /app
 
 # Copy package files
 COPY package*.json ./
-COPY prisma ./prisma/
 
-# Install dependencies
-RUN npm ci --only=production
+# Install ALL dependencies (including dev dependencies for build)
+RUN npm install
+
+# Copy prisma schema
+COPY prisma ./prisma/
 
 # Generate Prisma client
 RUN npx prisma generate
@@ -31,21 +33,19 @@ RUN apk add --no-cache dumb-init
 RUN addgroup -g 1001 -S nodejs
 RUN adduser -S nodejs -u 1001
 
-# Copy built application and dependencies
+# Copy built application and production dependencies
 COPY --from=builder --chown=nodejs:nodejs /app/dist ./dist
-COPY --from=builder --chown=nodejs:nodejs /app/node_modules ./node_modules
 COPY --from=builder --chown=nodejs:nodejs /app/prisma ./prisma
 COPY --from=builder --chown=nodejs:nodejs /app/package*.json ./
+
+# Install only production dependencies
+RUN npm ci --only=production && npm cache clean --force
 
 # Switch to non-root user
 USER nodejs
 
-# Expose port
-EXPOSE 3000
-
-# Health check
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD node -e "require('http').get('http://localhost:3000/health', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) })"
+# Cloud Run uses PORT environment variable
+EXPOSE $PORT
 
 # Start the application
 ENTRYPOINT ["dumb-init", "--"]

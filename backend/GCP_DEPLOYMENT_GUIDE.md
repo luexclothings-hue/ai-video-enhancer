@@ -45,11 +45,23 @@ Go to APIs & Services > Library and enable:
 
 Create two buckets in Cloud Storage:
 
-1. `video-enhancer-raw-prod` (for uploaded videos)
-2. `video-enhancer-enhanced-prod` (for processed videos)
+1. **Raw Videos Bucket**:
+   - Name: `video-enhancer-raw-prod`
+   - Region: `us-central1`
+   - Storage class: `Standard`
+   - **Lifecycle**: Delete objects after 30 days
 
-- Region: `us-central1`
-- Storage class: `Standard`
+2. **Enhanced Videos Bucket**:
+   - Name: `video-enhancer-enhanced-prod`
+   - Region: `us-central1`
+   - Storage class: `Standard`
+   - **Lifecycle**: Delete objects after 90 days
+
+**Set Lifecycle Policies**:
+
+1. Go to each bucket → Lifecycle tab
+2. Add rule: Delete objects older than 30 days (raw) / 90 days (enhanced)
+3. This saves storage costs automatically
 
 ### Step 5: Create Pub/Sub Topic
 
@@ -82,12 +94,8 @@ Create two buckets in Cloud Storage:
 git clone https://github.com/luexclothings-hue/ai-video-enhancer.git
 cd ai-video-enhancer
 
-# Build with no cache to avoid issues
-docker build --no-cache -f backend/apps/api/Dockerfile.cloudrun -t gcr.io/$GOOGLE_CLOUD_PROJECT/video-enhancer-api:latest backend/apps/api/
-
-# Configure Docker and push
-gcloud auth configure-docker
-docker push gcr.io/$GOOGLE_CLOUD_PROJECT/video-enhancer-api:latest
+# Build using Cloud Build (simpler and more reliable)
+gcloud builds submit --tag gcr.io/$GOOGLE_CLOUD_PROJECT/video-enhancer-api backend/apps/api
 ```
 
 ### Create Cloud Run Service:
