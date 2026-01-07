@@ -1,4 +1,4 @@
-import { PrismaClient, UserPlan } from '@prisma/client';
+import { PrismaClient } from '@prisma/client';
 import { SUBSCRIPTION_LIMITS } from '../../config';
 import {
   SubscriptionLimitError,

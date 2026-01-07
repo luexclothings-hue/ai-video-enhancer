@@ -13,7 +13,7 @@ declare module 'fastify' {
   }
 }
 
-export const authenticate = async (request: FastifyRequest, reply: FastifyReply) => {
+export const authenticate = async (request: FastifyRequest) => {
   try {
     const decoded = await request.jwtVerify<AuthUser>();
     request.user = decoded;

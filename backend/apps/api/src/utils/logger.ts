@@ -3,7 +3,7 @@ import { config } from '../config';
 
 const isDevelopment = config.NODE_ENV === 'development';
 
-export const logger = pino({
+const logger = pino({
   level: isDevelopment ? 'debug' : 'info',
   transport: isDevelopment
     ? {
@@ -22,5 +22,7 @@ export const logger = pino({
   },
   timestamp: pino.stdTimeFunctions.isoTime,
 });
+
+export default logger;
 
 export default logger;

@@ -17,7 +17,7 @@ import { jobRoutes } from './modules/jobs/jobs.routes';
 
 export async function buildApp() {
   const app = Fastify({
-    logger: logger,
+    logger: true,
     requestIdLogLabel: 'requestId',
     disableRequestLogging: false,
     requestIdHeader: 'x-request-id',

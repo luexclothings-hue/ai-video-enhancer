@@ -5,7 +5,7 @@ import { VideoService } from './videos.service';
 import { JobService } from '../jobs/jobs.service';
 import { storageService } from '../../services/storage.service';
 import { pubsubService } from '../../services/pubsub.service';
-import { config, SUBSCRIPTION_LIMITS } from '../../config';
+import { config } from '../../config';
 import { uploadVideoSchema } from './videos.schema';
 import logger from '../../utils/logger';
 import { z } from 'zod';
@@ -43,7 +43,7 @@ export async function videoRoutes(fastify: FastifyInstance) {
       const userId = request.user!.userId;
 
       // Validate subscription limits including resolution
-      const { user, limits } = await videoService.validateVideoUpload(
+      const { limits } = await videoService.validateVideoUpload(
         userId,
         durationSeconds,
         width,
