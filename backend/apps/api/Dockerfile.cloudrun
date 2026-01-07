@@ -3,12 +3,14 @@ FROM node:20-alpine AS builder
 
 WORKDIR /app
 
-# Copy package files
+# Copy package files from API directory
 COPY package*.json ./
-COPY prisma ./prisma/
 
 # Install dependencies
-RUN npm ci --only=production
+RUN npm install --only=production
+
+# Copy prisma schema
+COPY prisma ./prisma/
 
 # Generate Prisma client
 RUN npx prisma generate

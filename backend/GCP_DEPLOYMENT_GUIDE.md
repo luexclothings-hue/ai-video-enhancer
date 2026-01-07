@@ -213,6 +213,11 @@ cd ai-video-enhancer
 3. **Build and push the API image**:
 
 ```bash
+# First, generate package-lock.json in the API directory
+cd backend/apps/api
+npm install
+cd ../../..
+
 # Build the image using Cloud Run optimized Dockerfile
 docker build -f backend/apps/api/Dockerfile.cloudrun -t gcr.io/$GOOGLE_CLOUD_PROJECT/video-enhancer-api:latest backend/apps/api/
 
