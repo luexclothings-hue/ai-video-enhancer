@@ -1,0 +1,37 @@
+# Google Cloud Platform
+google-cloud-pubsub==2.18.4
+google-cloud-storage==2.14.0
+
+# Database
+psycopg2-binary==2.9.9
+
+# ML and Video Processing - Stream-DiffVSR compatible versions
+torch==2.0.1
+torchvision==0.15.2
+opencv-python==4.10.0.84
+numpy==1.26.4
+Pillow==10.4.0
+einops==0.8.0
+timm==1.0.15
+
+# Diffusers and HuggingFace
+diffusers==0.27.2
+transformers==4.37.2
+accelerate==0.23.0
+huggingface-hub==0.24.6
+safetensors==0.4.5
+
+# Additional ML dependencies for Stream-DiffVSR
+xformers==0.0.21
+controlnet-aux
+
+# FFmpeg wrapper
+ffmpeg-python==0.2.0
+
+# Utilities
+python-dotenv==1.0.0
+tqdm==4.65.2
+pyyaml==6.0.2
+
+# Logging
+colorlog==6.8.0
