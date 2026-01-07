@@ -3,23 +3,23 @@ import { FastifyInstance } from 'fastify';
 import fp from 'fastify-plugin';
 
 declare module 'fastify' {
-    interface FastifyInstance {
-        prisma: PrismaClient;
-    }
+  interface FastifyInstance {
+    prisma: PrismaClient;
+  }
 }
 
 async function prismaPlugin(fastify: FastifyInstance) {
-    const prisma = new PrismaClient({
-        log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],
-    });
+  const prisma = new PrismaClient({
+    log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],
+  });
 
-    await prisma.$connect();
+  await prisma.$connect();
 
-    fastify.decorate('prisma', prisma);
+  fastify.decorate('prisma', prisma);
 
-    fastify.addHook('onClose', async (instance) => {
-        await instance.prisma.$disconnect();
-    });
+  fastify.addHook('onClose', async (instance) => {
+    await instance.prisma.$disconnect();
+  });
 }
 
 export default fp(prismaPlugin);

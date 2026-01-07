@@ -62,7 +62,7 @@ User (Flutter) → API: POST /videos/upload
                  ├─ Create Job record (status: UPLOADED)
                  ├─ Publish message to Pub/Sub
                  └─ Return uploadUrl, videoId, jobId
-                 
+
 User uploads file → Cloud Storage (signed URL)
 
 Worker (Pub/Sub) ← Message received
@@ -118,6 +118,7 @@ User (Flutter) → API: GET /videos/:id
 ### Fastify API
 
 **Responsibilities:**
+
 - User authentication (JWT)
 - Subscription management and validation
 - Video metadata storage
@@ -126,6 +127,7 @@ User (Flutter) → API: GET /videos/:id
 - Pub/Sub job publishing
 
 **Tech Stack:**
+
 - Node.js 20+ with TypeScript
 - Fastify (HTTP server)
 - Prisma ORM (PostgreSQL)
@@ -135,6 +137,7 @@ User (Flutter) → API: GET /videos/:id
 - Zod (validation)
 
 **Scaling:**
+
 - Stateless design (horizontal scaling)
 - Connection pooling (database)
 - JWT for auth (no session storage)
@@ -142,6 +145,7 @@ User (Flutter) → API: GET /videos/:id
 ### Python GPU Worker
 
 **Responsibilities:**
+
 - Consume Pub/Sub messages
 - Download/upload videos
 - Frame extraction and encoding (FFmpeg)
@@ -150,6 +154,7 @@ User (Flutter) → API: GET /videos/:id
 - Minute charging
 
 **Tech Stack:**
+
 - Python 3.10+
 - PyTorch 2.1+ with CUDA
 - Stream-DiffVSR (pretrained)
@@ -158,6 +163,7 @@ User (Flutter) → API: GET /videos/:id
 - psycopg2 (PostgreSQL)
 
 **Scaling:**
+
 - Multiple worker instances (horizontal)
 - Pub/Sub distributes load
 - Each worker processes one job at a time
@@ -166,6 +172,7 @@ User (Flutter) → API: GET /videos/:id
 ### Database Schema
 
 **Users Table:**
+
 - `id` (UUID, primary key)
 - `email` (unique)
 - `passwordHash`
@@ -174,6 +181,7 @@ User (Flutter) → API: GET /videos/:id
 - `billingCycleStart`
 
 **Videos Table:**
+
 - `id` (UUID, primary key)
 - `userId` (foreign key)
 - `originalFilename`
@@ -183,6 +191,7 @@ User (Flutter) → API: GET /videos/:id
 - `outputStoragePath` (GCS URI, nullable)
 
 **Jobs Table:**
+
 - `id` (UUID, primary key)
 - `userId` (foreign key)
 - `videoId` (foreign key)
@@ -195,28 +204,32 @@ User (Flutter) → API: GET /videos/:id
 ### Cloud Infrastructure
 
 **Cloud Storage:**
+
 - Bucket: `video-enhancer-raw` (input videos)
 - Bucket: `video-enhancer-enhanced` (output videos)
 - Access: Signed URLs (time-limited)
 
 **Cloud Pub/Sub:**
+
 - Topic: `video-jobs`
 - Subscription: `video-jobs-subscription`
 - Message format: JSON with jobId, videoId, userId, inputPath, priority
 
 **Compute:**
+
 - API: Compute Engine VM (n1-standard-2) or Cloud Run
 - Worker: Compute Engine VM with GPU (n1-standard-4 + T4)
 
 ## Subscription Plans
 
 | Plan    | Videos/Lifetime | Max Duration | Minutes/Month | Resolution | Queue Priority |
-|---------|-----------------|--------------|---------------|------------|----------------|
+| ------- | --------------- | ------------ | ------------- | ---------- | -------------- |
 | FREE    | 1               | 30s          | -             | 720p       | Low            |
 | CREATOR | Unlimited       | 2m           | 30            | 1080p      | Normal         |
 | PRO     | Unlimited       | 5m           | 120           | 1080p      | High           |
 
 **Minute Calculation:**
+
 - Charged minutes = `ceil(video_duration_seconds / 60)`
 - Deducted from `minutesUsedThisMonth` after processing
 - Billing cycle: 30 days from `billingCycleStart`
@@ -224,15 +237,18 @@ User (Flutter) → API: GET /videos/:id
 ## Security
 
 **Authentication:**
+
 - JWT tokens (1 hour expiration)
 - Passwords hashed with bcrypt (12 rounds)
 - Bearer token in Authorization header
 
 **Authorization:**
+
 - Users can only access their own resources
 - Middleware checks `userId` from JWT
 
 **Data Protection:**
+
 - Signed URLs for Cloud Storage (time-limited)
 - HTTPS only in production
 - SQL injection prevention (Prisma ORM)
@@ -241,6 +257,7 @@ User (Flutter) → API: GET /videos/:id
 ## Error Handling
 
 **API Errors:**
+
 - `400 Bad Request` - Invalid input
 - `401 Unauthorized` - Missing/invalid token
 - `403 Forbidden` - Insufficient quota
@@ -248,6 +265,7 @@ User (Flutter) → API: GET /videos/:id
 - `500 Internal Server Error` - Unexpected errors
 
 **Worker Errors:**
+
 - Job status set to `FAILED`
 - Error message stored in database
 - Pub/Sub message nacked (retry)
@@ -256,11 +274,13 @@ User (Flutter) → API: GET /videos/:id
 ## Monitoring & Observability
 
 **Logging:**
+
 - Structured JSON logs (Pino)
 - Request IDs for tracing
 - Worker logs to stdout (captured by Cloud Logging)
 
 **Metrics:**
+
 - Job completion rate
 - Average processing time
 - Error rates
@@ -268,6 +288,7 @@ User (Flutter) → API: GET /videos/:id
 - API latency
 
 **Alerts:**
+
 - High error rate
 - Worker crashes
 - Database connection failures
@@ -276,16 +297,19 @@ User (Flutter) → API: GET /videos/:id
 ## Scalability Considerations
 
 **API Scaling:**
+
 - Horizontal: Add more API instances
 - Database: Read replicas for analytics
 - Cache: Redis for frequently accessed data (future)
 
 **Worker Scaling:**
+
 - Add more GPU VMs for parallel processing
 - Pub/Sub automatically distributes load
 - Each instance can process ~10-20 videos/hour (depending on length)
 
 **Cost vs Performance:**
+
 - Free tier: Process sequentially
 - Paid tiers: Higher priority in queue
 - Auto-scaling based on queue depth (future)

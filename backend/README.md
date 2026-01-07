@@ -49,17 +49,18 @@ Follow the comprehensive [GCP Deployment Guide](GCP_DEPLOYMENT_GUIDE.md) for ste
 
 ## 💳 Subscription Plans
 
-| Plan | Videos | Duration | Resolution | Monthly Cost |
-|------|--------|----------|------------|--------------|
-| FREE | 1 | 30s | 720p max | Free |
-| CREATOR | Unlimited | 2min | 720p max | $9.99 |
-| PRO | Unlimited | 5min | 720p max | $29.99 |
+| Plan    | Videos    | Duration | Resolution | Monthly Cost |
+| ------- | --------- | -------- | ---------- | ------------ |
+| FREE    | 1         | 30s      | 720p max   | Free         |
+| CREATOR | Unlimited | 2min     | 720p max   | $9.99        |
+| PRO     | Unlimited | 5min     | 720p max   | $29.99       |
 
 **Resolution Limits**: All plans limited to 720p (1280x720) for optimal performance.
 
 ## 🔧 Configuration
 
 ### API Environment
+
 ```env
 NODE_ENV=production
 DATABASE_URL=postgresql://user:pass@host:5432/db
@@ -70,6 +71,7 @@ GCS_BUCKET_VIDEOS_ENHANCED=your-enhanced-bucket
 ```
 
 ### Worker Environment
+
 ```env
 DATABASE_URL=postgresql://user:pass@host:5432/db
 GCP_PROJECT_ID=your-project-id
@@ -83,12 +85,14 @@ TARGET_WIDTH=1280
 ## 🧪 Testing
 
 ### Postman Collection
+
 1. Import `docs/postman_collection.json`
 2. Import `docs/postman_environments.json`
 3. Select appropriate environment
 4. Test all endpoints
 
 ### API Testing
+
 ```bash
 # Health check
 curl http://localhost:3000/health
@@ -102,11 +106,13 @@ curl -X POST http://localhost:3000/auth/register \
 ## 🎮 GPU Requirements
 
 ### Recommended GPUs:
+
 - **Tesla T4**: $350/month - Best cost/performance ratio
 - **Tesla V100**: $800/month - High performance
 - **Tesla A100**: $1200/month - Maximum performance
 
 ### Performance Expectations:
+
 - **720p video**: 1-2 seconds per frame
 - **5-minute video**: 30-90 minutes processing
 - **Batch size**: Auto-optimized based on GPU memory
@@ -137,6 +143,7 @@ nvidia-smi
 ### Development: Free (local resources)
 
 ### Production (GCP):
+
 - Cloud SQL: $25/month
 - Cloud Storage: $10/month
 - Pub/Sub: $1/month
@@ -147,6 +154,7 @@ nvidia-smi
 ## 🛠️ Development
 
 ### Project Structure
+
 ```
 backend/
 ├── apps/
@@ -158,6 +166,7 @@ backend/
 ```
 
 ### Key Features
+
 - **Stream-DiffVSR Integration**: Real model from HuggingFace Hub
 - **Resolution Validation**: Enforced 720p limits
 - **Dynamic Batch Sizing**: GPU memory optimization

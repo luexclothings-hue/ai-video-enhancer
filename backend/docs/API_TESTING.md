@@ -5,6 +5,7 @@ Quick guide to test the API endpoints with cURL and sample data.
 ## Setup
 
 1. Start the API server:
+
 ```bash
 cd backend/apps/api
 npm run dev
@@ -21,6 +22,7 @@ curl http://localhost:3000/health
 ```
 
 Expected response:
+
 ```json
 {
   "status": "ok",
@@ -40,6 +42,7 @@ curl -X POST http://localhost:3000/auth/register \
 ```
 
 Expected response (201):
+
 ```json
 {
   "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
@@ -80,6 +83,7 @@ curl http://localhost:3000/me/subscription \
 ```
 
 Expected response:
+
 ```json
 {
   "plan": "FREE",
@@ -116,6 +120,7 @@ curl -X POST http://localhost:3000/videos/upload \
 ```
 
 Expected response (201):
+
 ```json
 {
   "videoId": "660e8400-e29b-41d4-a716-446655440000",
@@ -157,6 +162,7 @@ curl http://localhost:3000/jobs?limit=10 \
 ```
 
 Filter by status:
+
 ```bash
 curl "http://localhost:3000/jobs?status=PROCESSING" \
   -H "Authorization: Bearer YOUR_TOKEN_HERE"
@@ -172,6 +178,7 @@ curl http://localhost:3000/jobs/JOB_ID \
 ## Error Responses
 
 ### 400 Bad Request
+
 ```json
 {
   "error": {
@@ -183,6 +190,7 @@ curl http://localhost:3000/jobs/JOB_ID \
 ```
 
 ### 401 Unauthorized
+
 ```json
 {
   "error": {
@@ -193,6 +201,7 @@ curl http://localhost:3000/jobs/JOB_ID \
 ```
 
 ### 403 Forbidden (Quota Exceeded)
+
 ```json
 {
   "error": {
@@ -203,6 +212,7 @@ curl http://localhost:3000/jobs/JOB_ID \
 ```
 
 ### 404 Not Found
+
 ```json
 {
   "error": {
@@ -215,11 +225,13 @@ curl http://localhost:3000/jobs/JOB_ID \
 ## Using Postman
 
 Import the Postman collection:
+
 ```
 docs/postman_collection.json
 ```
 
 Set environment variables:
+
 - `base_url`: http://localhost:3000
 - `auth_token`: (will be auto-set after login)
 

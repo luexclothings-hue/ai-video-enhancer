@@ -17,9 +17,11 @@ cd stream_diffvsr
 Visit the [Stream-DiffVSR project page](https://jamichss.github.io/stream-diffvsr-project-page/) to download pretrained weights.
 
 Typically, you'll download:
+
 - `streamdiffvsr_pretrained.pth`
 
 Place in:
+
 ```
 stream_diffvsr/checkpoints/streamdiffvsr_pretrained.pth
 ```
@@ -54,43 +56,43 @@ class VideoProcessor:
         self.ffmpeg = FFmpegPipeline()
         self.device = config.DEVICE
         self.model = None
-        
+
     def load_model(self):
         """Load Stream-DiffVSR model"""
         if self.model is not None:
             return
-        
+
         try:
             logger.info('Loading Stream-DiffVSR model...')
-            
+
             # Load model (adjust based on actual API)
             self.model = StreamDiffVSR(
                 checkpoint_path=config.MODEL_CHECKPOINT_PATH,
                 device=self.device
             )
             self.model.eval()
-            
+
             logger.info(f'Model loaded successfully on {self.device}')
-            
+
         except Exception as e:
             logger.error(f'Failed to load model: {e}')
             raise
-    
+
     def enhance_frames(self, input_dir: str, output_dir: str, total_frames: int):
         """Enhance video frames using Stream-DiffVSR"""
         try:
             os.makedirs(output_dir, exist_ok=True)
-            
+
             logger.info(f'Enhancing {total_frames} frames...')
-            
+
             frame_files = sorted([
                 f for f in os.listdir(input_dir) if f.startswith('frame_')
             ])
-            
+
             # Process frames
             for i in tqdm(range(0, len(frame_files), config.BATCH_SIZE)):
                 batch_files = frame_files[i:i + config.BATCH_SIZE]
-                
+
                 # Load batch as tensors
                 batch_tensors = []
                 for frame_file in batch_files:
@@ -99,13 +101,13 @@ class VideoProcessor:
                     tensor = torch.from_numpy(np.array(img)).float() / 255.0
                     tensor = tensor.permute(2, 0, 1)  # HWC -> CHW
                     batch_tensors.append(tensor)
-                
+
                 batch = torch.stack(batch_tensors).to(self.device)
-                
+
                 # Run inference
                 with torch.no_grad():
                     enhanced = self.model(batch)
-                
+
                 # Save enhanced frames
                 for j, frame_file in enumerate(batch_files):
                     # Convert tensor back to image
@@ -113,9 +115,9 @@ class VideoProcessor:
                     output_array = (output_tensor.permute(1, 2, 0).numpy() * 255).astype(np.uint8)
                     output_img = Image.fromarray(output_array)
                     output_img.save(os.path.join(output_dir, frame_file))
-            
+
             logger.info('Frame enhancement completed')
-            
+
         except Exception as e:
             logger.error(f'Frame enhancement failed: {e}')
             raise
@@ -158,16 +160,19 @@ print('Model loaded successfully!')
 ## Troubleshooting
 
 ### CUDA Out of Memory
+
 - Reduce `BATCH_SIZE` in `.env`
 - Process lower resolution
 - Use mixed precision (FP16)
 
 ### Model Loading Errors
+
 - Verify checkpoint path
 - Check CUDA version compatibility
 - Ensure all dependencies installed
 
 ### Quality Issues
+
 - Check input preprocessing
 - Verify output postprocessing
 - Adjust model parameters

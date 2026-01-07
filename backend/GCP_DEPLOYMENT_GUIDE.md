@@ -1,4 +1,5 @@
 # Google Cloud Platform Deployment Guide
+
 ## AI Video Enhancer - Production Deployment
 
 This guide will walk you through deploying your AI Video Enhancer to Google Cloud Platform using the web console (UI) with specific GPU recommendations and settings.
@@ -35,7 +36,7 @@ This guide will walk you through deploying your AI Video Enhancer to Google Clou
 1. **Go to APIs & Services > Library**
 2. **Search and enable these APIs** (click each, then click "Enable"):
    - **Compute Engine API**
-   - **Cloud SQL Admin API** 
+   - **Cloud SQL Admin API**
    - **Cloud Storage API**
    - **Cloud Pub/Sub API**
    - **Cloud Resource Manager API**
@@ -183,7 +184,7 @@ This guide will walk you through deploying your AI Video Enhancer to Google Clou
    - **Name**: `video-enhancer-api`
    - **Region**: `us-central1`
    - **Zone**: `us-central1-a`
-   - **Machine configuration**: 
+   - **Machine configuration**:
      - **Series**: `N1`
      - **Machine type**: `n1-standard-2` (2 vCPUs, 7.5 GB RAM) - $50/month
    - **Boot disk**:
@@ -191,7 +192,7 @@ This guide will walk you through deploying your AI Video Enhancer to Google Clou
      - **Version**: `Ubuntu 20.04 LTS`
      - **Boot disk type**: `Standard persistent disk`
      - **Size**: `50 GB`
-   - **Firewall**: 
+   - **Firewall**:
      - ✅ **Allow HTTP traffic**
      - ✅ **Allow HTTPS traffic**
 4. **Click "Create"** (takes 2-3 minutes)
@@ -227,11 +228,11 @@ This guide will walk you through deploying your AI Video Enhancer to Google Clou
 
 ### GPU Recommendations by Budget:
 
-| GPU Type | Monthly Cost | Performance | Recommended For |
-|----------|--------------|-------------|-----------------|
-| **Tesla T4** | ~$350 | Good | **Recommended** - Best cost/performance |
-| **Tesla V100** | ~$800 | Excellent | High-volume processing |
-| **Tesla A100** | ~$1200 | Outstanding | Maximum performance |
+| GPU Type       | Monthly Cost | Performance | Recommended For                         |
+| -------------- | ------------ | ----------- | --------------------------------------- |
+| **Tesla T4**   | ~$350        | Good        | **Recommended** - Best cost/performance |
+| **Tesla V100** | ~$800        | Excellent   | High-volume processing                  |
+| **Tesla A100** | ~$1200       | Outstanding | Maximum performance                     |
 
 4. **Click "Create"** (takes 3-5 minutes)
 
@@ -250,7 +251,7 @@ This guide will walk you through deploying your AI Video Enhancer to Google Clou
    - **Targets**: `Specified target tags`
    - **Target tags**: `http-server,https-server`
    - **Source IP ranges**: `0.0.0.0/0`
-   - **Protocols and ports**: 
+   - **Protocols and ports**:
      - ✅ **TCP** - Ports: `80,443`
 4. **Click "Create"**
 
@@ -264,10 +265,11 @@ This guide will walk you through deploying your AI Video Enhancer to Google Clou
    - Go to **Compute Engine > VM Instances**
    - Click **SSH** next to `video-enhancer-api`
 2. **Upload service account key**:
+
    ```bash
    # Create directory
    mkdir -p /opt/video-enhancer
-   
+
    # Upload your gcp-service-account.json file
    # (Use the upload button in SSH terminal or scp)
    ```
@@ -293,6 +295,7 @@ nano .env
 ```
 
 **Environment Configuration** (`.env`):
+
 ```env
 NODE_ENV=production
 PORT=3000
@@ -320,6 +323,7 @@ docker run -d --name api --restart unless-stopped -p 80:3000 \
    - Click **SSH** next to `video-enhancer-worker`
 
 2. **Install NVIDIA Docker**:
+
 ```bash
 # Install Docker
 curl -fsSL https://get.docker.com -o get-docker.sh
@@ -338,6 +342,7 @@ sudo docker run --rm --gpus all nvidia/cuda:11.8-base-ubuntu22.04 nvidia-smi
 ```
 
 3. **Deploy Worker**:
+
 ```bash
 # Clone repository
 cd /opt/video-enhancer
@@ -350,6 +355,7 @@ nano .env
 ```
 
 **Worker Environment** (`.env`):
+
 ```env
 DATABASE_URL=postgresql://postgres:YOUR_PASSWORD@/video_enhancer?host=/cloudsql/YOUR_PROJECT:us-central1:video-enhancer-db
 GCP_PROJECT_ID=your-project-id
@@ -388,11 +394,13 @@ docker run -d --name worker --restart unless-stopped --gpus all \
 ## 🔍 Step 12: Verify Deployment
 
 ### Check API Health:
+
 ```bash
 curl http://YOUR_API_IP/health
 ```
 
 **Expected Response**:
+
 ```json
 {
   "status": "ok",
@@ -403,12 +411,14 @@ curl http://YOUR_API_IP/health
 ```
 
 ### Check Worker Logs:
+
 ```bash
 # SSH into worker VM
 sudo docker logs worker -f
 ```
 
 **Expected Output**:
+
 ```
 Loading Stream-DiffVSR model from Jamichsu/Stream-DiffVSR...
 Model loaded successfully on cuda
@@ -419,17 +429,18 @@ Worker listening for jobs on video-jobs-subscription...
 
 ## 💰 Cost Breakdown
 
-| Service | Configuration | Monthly Cost |
-|---------|---------------|--------------|
-| **Cloud SQL** | db-g1-small | $25 |
-| **Cloud Storage** | 500GB Standard | $10 |
-| **Pub/Sub** | 1M messages | $1 |
-| **API VM** | n1-standard-2 | $50 |
-| **GPU VM** | n1-standard-4 + T4 | $350 |
-| **Network** | Egress traffic | $10-20 |
-| **Total** | | **~$446-456/month** |
+| Service           | Configuration      | Monthly Cost        |
+| ----------------- | ------------------ | ------------------- |
+| **Cloud SQL**     | db-g1-small        | $25                 |
+| **Cloud Storage** | 500GB Standard     | $10                 |
+| **Pub/Sub**       | 1M messages        | $1                  |
+| **API VM**        | n1-standard-2      | $50                 |
+| **GPU VM**        | n1-standard-4 + T4 | $350                |
+| **Network**       | Egress traffic     | $10-20              |
+| **Total**         |                    | **~$446-456/month** |
 
 ### Cost Optimization Tips:
+
 - Use **Preemptible GPU VMs** (70% cheaper, but can be terminated)
 - Set up **auto-shutdown** during low usage hours
 - Use **committed use discounts** for long-term deployments
@@ -454,6 +465,7 @@ Worker listening for jobs on video-jobs-subscription...
 ## 🎯 Next Steps
 
 ### For Production:
+
 1. **Set up a domain name** and SSL certificate
 2. **Configure load balancer** for high availability
 3. **Set up automated backups**
@@ -461,6 +473,7 @@ Worker listening for jobs on video-jobs-subscription...
 5. **Set up CI/CD pipeline** for deployments
 
 ### For Testing:
+
 1. **Import Postman collection** from `docs/postman_collection.json`
 2. **Import Postman environment** from `docs/postman_environments.json`
 3. **Update environment variables** with your API IP
@@ -473,21 +486,25 @@ Worker listening for jobs on video-jobs-subscription...
 ### Common Issues:
 
 **API won't start:**
+
 - Check database connection string
 - Verify service account permissions
 - Check firewall rules
 
 **Worker not processing jobs:**
+
 - Verify GPU drivers: `nvidia-smi`
 - Check Pub/Sub subscription
 - Monitor worker logs: `docker logs worker -f`
 
 **High costs:**
+
 - Check for stuck VMs
 - Review storage lifecycle policies
 - Monitor Pub/Sub message retention
 
 ### Support Resources:
+
 - **Google Cloud Documentation**: https://cloud.google.com/docs
 - **GPU Troubleshooting**: https://cloud.google.com/compute/docs/gpus
 - **Cloud SQL Connection**: https://cloud.google.com/sql/docs/postgres/connect-compute-engine
