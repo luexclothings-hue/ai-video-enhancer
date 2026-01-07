@@ -1,52 +1,52 @@
-# Cloud Run optimized Dockerfile
 FROM node:20-alpine AS builder
 
 WORKDIR /app
 
+# Install OpenSSL for Prisma
+RUN apk add --no-cache openssl
+
 # Copy package files
 COPY package*.json ./
 
-# Install ALL dependencies (including dev dependencies for build)
+# Install all dependencies
 RUN npm install
 
-# Copy prisma schema
+# Copy prisma schema and generate client
 COPY prisma ./prisma/
-
-# Generate Prisma client
 RUN npx prisma generate
 
-# Copy source code
+# Copy source code and build
 COPY . .
-
-# Build the application
 RUN npm run build
 
 # Production stage
-FROM node:20-alpine AS production
+FROM node:20-alpine
 
 WORKDIR /app
 
-# Install dumb-init for proper signal handling
-RUN apk add --no-cache dumb-init
+# Install OpenSSL and dumb-init
+RUN apk add --no-cache openssl dumb-init
 
 # Create non-root user
-RUN addgroup -g 1001 -S nodejs
-RUN adduser -S nodejs -u 1001
+RUN addgroup -g 1001 -S nodejs && adduser -S nodejs -u 1001
 
-# Copy built application and production dependencies
-COPY --from=builder --chown=nodejs:nodejs /app/dist ./dist
-COPY --from=builder --chown=nodejs:nodejs /app/prisma ./prisma
-COPY --from=builder --chown=nodejs:nodejs /app/package*.json ./
-
-# Install only production dependencies
+# Copy package files and install production deps only
+COPY package*.json ./
 RUN npm ci --only=production && npm cache clean --force
 
-# Switch to non-root user
+# Copy prisma and generate client
+COPY prisma ./prisma/
+RUN npx prisma generate
+
+# Copy built application
+COPY --from=builder /app/dist ./dist
+
+# Set ownership
+RUN chown -R nodejs:nodejs /app
+
 USER nodejs
 
-# Cloud Run uses PORT environment variable
-EXPOSE $PORT
+EXPOSE 3000
 
-# Start the application
 ENTRYPOINT ["dumb-init", "--"]
 CMD ["node", "dist/server.js"]
