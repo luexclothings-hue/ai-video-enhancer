@@ -1,15 +1,13 @@
 import { FastifyInstance } from 'fastify';
-import { ZodTypeProvider } from 'fastify-type-provider-zod';
 import { AuthService } from './auth.service';
 import { registerSchema, loginSchema } from './auth.schema';
 import logger from '../../utils/logger';
 
 export async function authRoutes(fastify: FastifyInstance) {
-  const server = fastify.withTypeProvider<ZodTypeProvider>();
   const authService = new AuthService(fastify.prisma);
 
   // POST /auth/register
-  server.post(
+  fastify.post(
     '/auth/register',
     {
       schema: {
@@ -36,7 +34,8 @@ export async function authRoutes(fastify: FastifyInstance) {
       },
     },
     async (request, reply) => {
-      const user = await authService.register(request.body);
+      const body = request.body as { email: string; password: string };
+      const user = await authService.register(body);
 
       const token = fastify.jwt.sign({
         userId: user.id,
@@ -53,7 +52,7 @@ export async function authRoutes(fastify: FastifyInstance) {
   );
 
   // POST /auth/login
-  server.post(
+  fastify.post(
     '/auth/login',
     {
       schema: {
@@ -80,7 +79,8 @@ export async function authRoutes(fastify: FastifyInstance) {
       },
     },
     async (request, reply) => {
-      const user = await authService.login(request.body);
+      const body = request.body as { email: string; password: string };
+      const user = await authService.login(body);
 
       const token = fastify.jwt.sign({
         userId: user.id,
