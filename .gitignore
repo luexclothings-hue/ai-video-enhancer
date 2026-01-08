@@ -156,9 +156,6 @@ ENV/
 env.bak/
 venv.bak/
 
-# Docker
-.dockerignore
-
 # GCP Service Account Keys
 **/gcp-*.json
 **/service-account*.json

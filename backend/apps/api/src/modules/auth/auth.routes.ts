@@ -1,4 +1,4 @@
-import { FastifyInstance } from 'fastify';
+import { type FastifyInstance } from 'fastify';
 import { AuthService } from './auth.service';
 import { registerSchema, loginSchema } from './auth.schema';
 import logger from '../../utils/logger';
@@ -34,8 +34,8 @@ export async function authRoutes(fastify: FastifyInstance) {
       },
     },
     async (request, reply) => {
-      const body = request.body as { email: string; password: string };
-      const user = await authService.register(body);
+      const { email, password } = registerSchema.parse(request.body);
+      const user = await authService.register({ email, password });
 
       const token = fastify.jwt.sign({
         userId: user.id,
@@ -79,8 +79,8 @@ export async function authRoutes(fastify: FastifyInstance) {
       },
     },
     async (request, reply) => {
-      const body = request.body as { email: string; password: string };
-      const user = await authService.login(body);
+      const { email, password } = loginSchema.parse(request.body);
+      const user = await authService.login({ email, password });
 
       const token = fastify.jwt.sign({
         userId: user.id,

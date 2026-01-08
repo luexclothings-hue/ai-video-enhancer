@@ -1,3 +1,8 @@
+# syntax=docker/dockerfile:1
+
+# ===========================
+# Builder Stage
+# ===========================
 FROM node:20-alpine AS builder
 
 WORKDIR /app
@@ -5,11 +10,11 @@ WORKDIR /app
 # Install OpenSSL for Prisma
 RUN apk add --no-cache openssl
 
-# Copy package files
-COPY package*.json ./
+# Copy package files first for better caching
+COPY package.json package-lock.json ./
 
-# Install all dependencies
-RUN npm install
+# Install ALL dependencies (including devDependencies for build)
+RUN npm ci
 
 # Copy prisma schema and generate client
 COPY prisma ./prisma/
@@ -19,34 +24,45 @@ RUN npx prisma generate
 COPY . .
 RUN npm run build
 
-# Production stage
+# ===========================
+# Production Stage
+# ===========================
 FROM node:20-alpine
 
 WORKDIR /app
 
-# Install OpenSSL and dumb-init
+# Install runtime dependencies
 RUN apk add --no-cache openssl dumb-init
 
-# Create non-root user
+# Create non-root user for security
 RUN addgroup -g 1001 -S nodejs && adduser -S nodejs -u 1001
 
-# Copy package files and install production deps only
-COPY package*.json ./
-RUN npm ci --only=production && npm cache clean --force
+# Copy package files
+COPY package.json package-lock.json ./
 
-# Copy prisma and generate client
+# Install ONLY production dependencies
+RUN npm ci --omit=dev
+
+# Copy prisma schema and generate client
 COPY prisma ./prisma/
 RUN npx prisma generate
 
-# Copy built application
-COPY --from=builder /app/dist ./dist
+# Copy built application from builder stage
+COPY --from=builder --chown=nodejs:nodejs /app/dist ./dist
 
-# Set ownership
+# Set ownership to non-root user
 RUN chown -R nodejs:nodejs /app
 
+# Switch to non-root user
 USER nodejs
 
+# Expose application port
 EXPOSE 3000
 
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s --start-period=40s --retries=3 \
+  CMD node -e "require('http').get('http://localhost:3000/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"
+
+# Use dumb-init to handle signals properly
 ENTRYPOINT ["dumb-init", "--"]
 CMD ["node", "dist/server.js"]
