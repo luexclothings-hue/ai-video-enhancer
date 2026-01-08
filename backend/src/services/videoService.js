@@ -21,7 +21,7 @@ class VideoService {
 
         // 2. Save metadata to DB
         const insertQuery = `
-      INSERT INTO videos (filename, gcs_raw_path, status)
+      INSERT INTO videos (filename, gcs_raw_path, status, progress)
       VALUES ($1, $2, 'PENDING', 0)
       RETURNING id, created_at, status, progress
     `;
