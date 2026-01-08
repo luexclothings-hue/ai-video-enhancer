@@ -61,29 +61,59 @@ Uploads a video file (`multipart/form-data`).
 
 We recommend deploying to Cloud Run for autoscaling and zero-maintenance.
 
-### 1. Build and Deploy
-You can deploy directly from source using the gcloud CLI.
+### 1. Prerequisites (One-time Setup)
+Ensure you have the Google Cloud SDK installed and authenticated.
+```bash
+gcloud auth login
+gcloud config set project [YOUR_PROJECT_ID]
+```
+
+Enable necessary APIs:
+```bash
+gcloud services enable run.googleapis.com sqladmin.googleapis.com
+```
+
+### 2. Prepare Environment Variables
+You will need the following values ready:
+- `GCP_PROJECT_ID`: Your project ID.
+- `GCS_BUCKET_RAW`: Bucket for uploads.
+- `GCS_BUCKET_ENHANCED`: Bucket for results.
+- `PUBSUB_TOPIC_NAME`: The Pub/Sub topic name (e.g., `video-enhancement-jobs`).
+- `DB_INSTANCE_CONNECTION_NAME`: Find this in Cloud SQL > Overview (format: `project:region:instance`).
+- `DB_USER` / `DB_PASSWORD`: Your Cloud SQL credentials.
+- `DB_NAME`: Your database name.
+
+### 3. Deploy Command
+Run this command from the `backend/` directory.
+
+> **Important**: Replace the bracketed values `[...]` with your actual configuration.
 
 ```bash
 gcloud run deploy video-enhancer-backend \
   --source . \
   --region us-central1 \
   --allow-unauthenticated \
-  --set-env-vars GCP_PROJECT_ID=your-project-id \
-  --set-env-vars GCS_BUCKET_RAW=your-raw-bucket \
-  --set-env-vars GCS_BUCKET_ENHANCED=your-enhanced-bucket \
-  --set-env-vars PUBSUB_TOPIC_NAME=your-topic-name
+  --set-env-vars GCP_PROJECT_ID=[YOUR_PROJECT_ID] \
+  --set-env-vars GCS_BUCKET_RAW=[GCS_BUCKET_RAW] \
+  --set-env-vars GCS_BUCKET_ENHANCED=[GCS_BUCKET_ENHANCED] \
+  --set-env-vars PUBSUB_TOPIC_NAME=[PUBSUB_TOPIC_NAME] \
+  --set-env-vars DATABASE_URL="postgresql://[DB_USER]:[DB_PASSWORD]@/video_enhancer?host=/cloudsql/[DB_INSTANCE_CONNECTION_NAME]" \
+  --add-cloudsql-instances [DB_INSTANCE_CONNECTION_NAME]
 ```
 
-### 2. Connect to Cloud SQL (Option A: Socket)
-For production, use the Unix socket connection.
-1. Go to Cloud Run console > Edit Service.
-2. **Connections** tab > **Cloud SQL connections**: Select your instance.
-3. **Variables** tab: Set `DATABASE_URL` to:
-   ```
-   postgresql://USER:PASSWORD@/video_enhancer?host=/cloudsql/INSTANCE_CONNECTION_NAME
-   ```
-   *(Replace `INSTANCE_CONNECTION_NAME` with the string like `project:region:instance`)*
+**breakdown of flags:**
+- `--source .`: Uploads your code and builds it automatically (no Dockerfile manual build needed).
+- `--allow-unauthenticated`: Makes the API public (remove this if you want to put it behind an API Gateway/Load Balancer later).
+- `--add-cloudsql-instances`: Automatically mounts the Cloud SQL socket.
+- `DATABASE_URL`: Note the format! It uses the socket path provided by Google.
+
+### 4. Database Migration
+Since Cloud Run is serverless, running migrations is best done separately. You can connect via Cloud Shell or from your local machine using the Auth Proxy (see Local Development section) to run the `init_db.sql` script.
+
+```bash
+# Example from local machine with Proxy running on port 5432
+psql "postgresql://[DB_USER]:[DB_PASSWORD]@127.0.0.1:5432/[DB_NAME]" -f init_db.sql
+```
 
 ---
 
