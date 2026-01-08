@@ -1,10 +1,10 @@
 // @ts-check
-import eslint from '@eslint/js';
-import tseslint from 'typescript-eslint';
-import prettier from 'eslint-config-prettier';
-import globals from 'globals';
+const eslint = require('@eslint/js');
+const tseslint = require('typescript-eslint');
+const prettier = require('eslint-config-prettier');
+const globals = require('globals');
 
-export default tseslint.config(
+module.exports = tseslint.config(
   // Ignore patterns
   {
     ignores: ['dist/', 'node_modules/', '*.js', '!eslint.config.js'],
@@ -26,7 +26,7 @@ export default tseslint.config(
       },
       parserOptions: {
         projectService: true,
-        tsconfigRootDir: import.meta.dirname,
+        tsconfigRootDir: __dirname,
       },
     },
     rules: {
