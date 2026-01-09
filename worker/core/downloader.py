@@ -37,3 +37,17 @@ def download_video(gcs_path, local_dir="/tmp"):
     print("Download complete.")
     
     return local_path
+
+def upload_video(local_path, gcs_bucket_name, blob_name):
+    """
+    Uploads a local video to GCS.
+    """
+    storage_client = storage.Client()
+    bucket = storage_client.bucket(gcs_bucket_name)
+    blob = bucket.blob(blob_name)
+    
+    print(f"Uploading {local_path} to gs://{gcs_bucket_name}/{blob_name}...")
+    blob.upload_from_filename(local_path)
+    print("Upload complete.")
+    
+    return f"gs://{gcs_bucket_name}/{blob_name}"
