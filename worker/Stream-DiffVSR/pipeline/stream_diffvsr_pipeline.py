@@ -731,7 +731,8 @@ class StreamDiffVSRPipeline(
         control_guidance_end: Union[float, List[float]] = 1.0,
         of_model = None,
         of_rescale_factor: int = 1,
-        timesteps_to_be_used: Optional[List[float]] = None
+        timesteps_to_be_used: Optional[List[float]] = None,
+        frame_callback: Optional[Callable[[int, int], None]] = None
     ):
         r"""
         The call function to the pipeline for generation.
@@ -1059,6 +1060,9 @@ class StreamDiffVSRPipeline(
                 images[num_image] = image
 
                 self.vae.reset_temporal_condition()
+                
+                if frame_callback:
+                    frame_callback(num_image + 1, len(images))
 
         # If we do sequential model offloading, let's offload unet and controlnet
         # manually for max memory savings
